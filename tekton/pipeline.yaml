@@ -1,0 +1,277 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: raj-dashboard-pipeline
+  namespace: raj-compliance-dashboard
+spec:
+  description: CI/CD pipeline for Raj's Hospital Compliance Dashboard
+  params:
+  - name: repo-url
+    type: string
+    description: The git repository URL to clone from
+    default: https://github.com/rh-summit-coco/raj-hospital-dashboard.git
+  - name: image-reference
+    type: string
+    description: Reference of the image to build
+    default: image-registry.openshift-image-registry.svc:5000/raj-compliance-dashboard/raj-dashboard:latest
+  - name: revision
+    type: string
+    description: Revision to checkout (branch, tag, sha, ref)
+    default: main
+  - name: target-namespace
+    type: string
+    description: Target namespace for deployment
+    default: raj-compliance-dashboard
+
+  workspaces:
+  - name: shared-data
+    description: Shared workspace for pipeline tasks
+  - name: git-credentials
+    description: Git credentials for private repositories
+    optional: true
+
+  tasks:
+  - name: fetch-source
+    taskRef:
+      name: git-clone
+      kind: ClusterTask
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: basic-auth
+      workspace: git-credentials
+      optional: true
+    params:
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.revision)
+
+  - name: build-image
+    taskRef:
+      name: s2i-nginx
+    runAfter:
+    - fetch-source
+    workspaces:
+    - name: source
+      workspace: shared-data
+    params:
+    - name: IMAGE
+      value: $(params.image-reference)
+    - name: BUILDER_IMAGE
+      value: registry.redhat.io/ubi9/nginx-120:latest
+
+  - name: security-scan
+    taskRef:
+      name: roxctl-image-scan
+    runAfter:
+    - build-image
+    workspaces:
+    - name: source
+      workspace: shared-data
+    params:
+    - name: image
+      value: $(params.image-reference)
+    - name: rox_central_endpoint
+      value: stackrox-central-stackrox.apps.uhfgfgde.eastus.aroapp.io:443
+    when:
+    - input: "$(params.target-namespace)"
+      operator: in
+      values: ["raj-compliance-dashboard-prod", "raj-compliance-dashboard"]
+
+  - name: deploy-to-dev
+    taskRef:
+      name: openshift-client
+      kind: ClusterTask
+    runAfter:
+    - build-image
+    workspaces:
+    - name: manifest-dir
+      workspace: shared-data
+    params:
+    - name: SCRIPT
+      value: |
+        oc apply -f kubernetes/deployment.yaml -n $(params.target-namespace)
+        oc set image deployment/raj-hospital-dashboard dashboard=$(params.image-reference) -n $(params.target-namespace)
+        oc rollout status deployment/raj-hospital-dashboard -n $(params.target-namespace) --timeout=300s
+
+  - name: run-tests
+    taskRef:
+      name: task-test-dashboard
+    runAfter:
+    - deploy-to-dev
+    workspaces:
+    - name: source
+      workspace: shared-data
+    params:
+    - name: dashboard-url
+      value: "http://raj-dashboard-$(params.target-namespace).apps.uhfgfgde.eastus.aroapp.io"
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: s2i-nginx
+  namespace: raj-compliance-dashboard
+spec:
+  description: Source-to-Image build task for nginx applications
+  params:
+  - name: IMAGE
+    description: Reference of the image to build
+    type: string
+  - name: BUILDER_IMAGE
+    description: The location of the s2i builder image
+    type: string
+    default: registry.redhat.io/ubi9/nginx-120:latest
+  - name: CONTEXT_PATH
+    description: Path to the source code directory
+    type: string
+    default: "."
+
+  workspaces:
+  - name: source
+    description: Source code workspace
+
+  steps:
+  - name: build
+    image: registry.redhat.io/ocp-tools-4/source-to-image-rhel8:latest
+    workingDir: $(workspaces.source.path)
+    command:
+    - s2i
+    - build
+    - $(params.CONTEXT_PATH)
+    - $(params.BUILDER_IMAGE)
+    - $(params.IMAGE)
+    - --as-dockerfile
+    - /tmp/Dockerfile
+    volumeMounts:
+    - name: varlibcontainers
+      mountPath: /var/lib/containers
+    securityContext:
+      privileged: true
+
+  - name: push
+    image: registry.redhat.io/ubi9/buildah:latest
+    workingDir: $(workspaces.source.path)
+    command:
+    - buildah
+    - build
+    - --file
+    - /tmp/Dockerfile
+    - --tag
+    - $(params.IMAGE)
+    - --push
+    - .
+    volumeMounts:
+    - name: varlibcontainers
+      mountPath: /var/lib/containers
+    securityContext:
+      privileged: true
+
+  volumes:
+  - name: varlibcontainers
+    emptyDir: {}
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: task-test-dashboard
+  namespace: raj-compliance-dashboard
+spec:
+  description: Test the deployed dashboard functionality
+  params:
+  - name: dashboard-url
+    description: URL of the deployed dashboard
+    type: string
+
+  workspaces:
+  - name: source
+    description: Source code workspace
+
+  steps:
+  - name: test-dashboard
+    image: registry.redhat.io/ubi9/ubi:latest
+    script: |
+      #!/bin/bash
+      set -e
+
+      echo "Testing dashboard at: $(params.dashboard-url)"
+
+      # Install curl
+      dnf install -y curl
+
+      # Test dashboard accessibility
+      echo "Testing dashboard accessibility..."
+      if curl -f -s "$(params.dashboard-url)" > /dev/null; then
+        echo "✅ Dashboard is accessible"
+      else
+        echo "❌ Dashboard is not accessible"
+        exit 1
+      fi
+
+      # Test dashboard content
+      echo "Testing dashboard content..."
+      CONTENT=$(curl -s "$(params.dashboard-url)")
+
+      if echo "$CONTENT" | grep -q "St. Mercy Hospital"; then
+        echo "✅ Hospital branding found"
+      else
+        echo "❌ Hospital branding missing"
+        exit 1
+      fi
+
+      if echo "$CONTENT" | grep -q "Security Compliance Dashboard"; then
+        echo "✅ Dashboard title found"
+      else
+        echo "❌ Dashboard title missing"
+        exit 1
+      fi
+
+      if echo "$CONTENT" | grep -q "Gate 1: Code Integrity"; then
+        echo "✅ Gate 1 content found"
+      else
+        echo "❌ Gate 1 content missing"
+        exit 1
+      fi
+
+      if echo "$CONTENT" | grep -q "Gate 2: TEE Attestation"; then
+        echo "✅ Gate 2 content found"
+      else
+        echo "❌ Gate 2 content missing"
+        exit 1
+      fi
+
+      echo "🎉 All dashboard tests passed!"
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: raj-dashboard-pipeline-run
+  namespace: raj-compliance-dashboard
+  annotations:
+    chains.tekton.dev/signed: "true"
+spec:
+  pipelineRef:
+    name: raj-dashboard-pipeline
+
+  params:
+  - name: repo-url
+    value: https://github.com/rh-summit-coco/raj-hospital-dashboard.git
+  - name: image-reference
+    value: image-registry.openshift-image-registry.svc:5000/raj-compliance-dashboard/raj-dashboard:latest
+  - name: revision
+    value: main
+  - name: target-namespace
+    value: raj-compliance-dashboard
+
+  workspaces:
+  - name: shared-data
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

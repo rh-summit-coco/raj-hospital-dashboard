@@ -1,0 +1,110 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: raj-dashboard-listener
+  namespace: raj-compliance-dashboard
+spec:
+  serviceAccountName: pipeline
+  triggers:
+  - name: github-push-trigger
+    interceptors:
+    - name: github
+      ref:
+        name: github
+      params:
+      - name: secretRef
+        value:
+          secretName: github-webhook-secret
+          secretKey: secretToken
+      - name: eventTypes
+        value:
+        - push
+    bindings:
+    - ref: raj-dashboard-trigger-binding
+    template:
+      ref: raj-dashboard-trigger-template
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: raj-dashboard-trigger-binding
+  namespace: raj-compliance-dashboard
+spec:
+  params:
+  - name: git-repo-url
+    value: $(body.repository.clone_url)
+  - name: git-revision
+    value: $(body.head_commit.id)
+  - name: git-repo-name
+    value: $(body.repository.name)
+  - name: git-commit-message
+    value: $(body.head_commit.message)
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: raj-dashboard-trigger-template
+  namespace: raj-compliance-dashboard
+spec:
+  params:
+  - name: git-repo-url
+    description: The git repository url
+  - name: git-revision
+    description: The git revision
+    default: main
+  - name: git-repo-name
+    description: The name of the deployment to be created / patched
+  - name: git-commit-message
+    description: Git commit message
+
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: raj-dashboard-pipeline-run-
+      namespace: raj-compliance-dashboard
+      annotations:
+        chains.tekton.dev/signed: "true"
+      labels:
+        app.kubernetes.io/managed-by: tekton-pipelines
+        tekton.dev/pipeline: raj-dashboard-pipeline
+    spec:
+      pipelineRef:
+        name: raj-dashboard-pipeline
+
+      params:
+      - name: repo-url
+        value: $(tt.params.git-repo-url)
+      - name: image-reference
+        value: image-registry.openshift-image-registry.svc:5000/raj-compliance-dashboard/raj-dashboard:$(tt.params.git-revision)
+      - name: revision
+        value: $(tt.params.git-revision)
+      - name: target-namespace
+        value: raj-compliance-dashboard
+
+      workspaces:
+      - name: shared-data
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: raj-dashboard-webhook
+  namespace: raj-compliance-dashboard
+spec:
+  to:
+    kind: Service
+    name: el-raj-dashboard-listener
+  port:
+    targetPort: http-listener
+  tls:
+    termination: edge
