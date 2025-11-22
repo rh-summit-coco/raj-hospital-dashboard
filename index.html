@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St. Mercy Hospital - Security Compliance Dashboard</title>
+    <style>
+        :root {
+            /* Hospital brand colors */
+            --hospital-primary: #1e4a72;      /* Deep medical blue */
+            --hospital-secondary: #2e8b87;    /* Teal green */
+            --hospital-accent: #f8f9fa;       /* Clean white */
+            --hospital-success: #28a745;      /* Medical green */
+            --hospital-warning: #ffc107;      /* Amber */
+            --hospital-danger: #dc3545;       /* Emergency red */
+            --hospital-light: #e9ecef;        /* Light gray */
+            --hospital-text: #2c3e50;         /* Dark blue-gray */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--hospital-accent) 0%, var(--hospital-light) 100%);
+            color: var(--hospital-text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--hospital-primary) 0%, var(--hospital-secondary) 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 4px 15px rgba(30, 74, 114, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .hospital-logo {
+            font-size: 3rem;
+        }
+
+        .header-text h1 {
+            font-size: 2.2rem;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+
+        .header-text p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .dashboard-content {
+            background: white;
+            padding: 40px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-overview {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .overall-status {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .status-compliant {
+            background: linear-gradient(135deg, var(--hospital-success) 0%, #20c997 100%);
+            color: white;
+        }
+
+        .status-violation {
+            background: linear-gradient(135deg, var(--hospital-danger) 0%, #e74c3c 100%);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .gates-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .gate-card {
+            background: var(--hospital-accent);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 5px solid var(--hospital-primary);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .gate-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .gate-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .gate-icon {
+            font-size: 2rem;
+        }
+
+        .gate-title {
+            font-size: 1.3rem;
+            color: var(--hospital-primary);
+            font-weight: 600;
+        }
+
+        .gate-status {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .gate-description {
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .status-passing {
+            color: var(--hospital-success);
+        }
+
+        .status-failed {
+            color: var(--hospital-danger);
+        }
+
+        .events-section {
+            margin-top: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--hospital-primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .events-container {
+            background: var(--hospital-light);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--hospital-success);
+            transition: transform 0.2s ease;
+        }
+
+        .event-item:hover {
+            transform: translateX(5px);
+        }
+
+        .event-item.event-failed {
+            border-left-color: var(--hospital-danger);
+            background: #fff5f5;
+        }
+
+        .event-time {
+            font-weight: 600;
+            color: var(--hospital-primary);
+        }
+
+        .event-details {
+            flex: 1;
+        }
+
+        .event-app {
+            font-weight: 500;
+            color: var(--hospital-text);
+        }
+
+        .event-status {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, var(--hospital-danger) 0%, #e74c3c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .alert-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .alert-detail {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 15px;
+            border-radius: 6px;
+        }
+
+        .alert-detail strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .refresh-info {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .toggle-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .toggle-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success {
+            background: var(--hospital-success);
+            color: white;
+        }
+
+        .btn-attack {
+            background: var(--hospital-danger);
+            color: white;
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="hospital-logo">🏥</div>
+            <div class="header-text">
+                <h1>St. Mercy Hospital</h1>
+                <p>Security Compliance Dashboard | Confidential Computing Protection</p>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Demo Toggle Buttons -->
+            <div class="toggle-buttons">
+                <button class="toggle-btn btn-success" onclick="showSuccessScenario()">✅ Normal Operations</button>
+                <button class="toggle-btn btn-attack" onclick="showAttackScenario()">🚨 Security Incident</button>
+            </div>
+
+            <!-- Success Scenario -->
+            <div id="success-scenario">
+                <div class="status-overview">
+                    <div class="overall-status status-compliant">
+                        🟢 SYSTEM STATUS: COMPLIANT
+                    </div>
+                </div>
+
+                <div class="gates-container">
+                    <div class="gate-card">
+                        <div class="gate-header">
+                            <div class="gate-icon">🔐</div>
+                            <div class="gate-title">Gate 1: Code Integrity</div>
+                        </div>
+                        <div class="gate-status status-passing">✅ PASSING</div>
+                        <div class="gate-description">Container signatures verified against trusted keys</div>
+                    </div>
+
+                    <div class="gate-card">
+                        <div class="gate-header">
+                            <div class="gate-icon">🛡️</div>
+                            <div class="gate-title">Gate 2: TEE Attestation</div>
+                        </div>
+                        <div class="gate-status status-passing">✅ PASSING</div>
+                        <div class="gate-description">Remote attestation successful - genuine confidential environment</div>
+                    </div>
+                </div>
+
+                <div class="events-section">
+                    <h3 class="section-title">📋 Recent Security Events</h3>
+                    <div class="events-container">
+                        <div class="event-item">
+                            <div class="event-time">15:30:45</div>
+                            <div class="event-details">
+                                <div class="event-app">✅ janine-ai-model-v1.3</div>
+                                <div class="event-status">Attestation successful • Key released • Model decrypted</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-time">14:45:22</div>
+                            <div class="event-details">
+                                <div class="event-app">✅ database-backup-service</div>
+                                <div class="event-status">Container signature verified • TEE attestation passed</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-time">14:30:15</div>
+                            <div class="event-details">
+                                <div class="event-app">✅ janine-ai-model-v1.2</div>
+                                <div class="event-status">Previous model version - attestation successful</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attack Scenario -->
+            <div id="attack-scenario" class="hidden">
+                <div class="status-overview">
+                    <div class="overall-status status-violation">
+                        🔴 SECURITY VIOLATION DETECTED
+                    </div>
+                </div>
+
+                <div class="alert-box">
+                    <div class="alert-title">
+                        🚨 CRITICAL SECURITY EVENT
+                    </div>
+                    <div class="alert-details">
+                        <div class="alert-detail">
+                            <strong>EVENT:</strong>
+                            ATTESTATION DENIED
+                        </div>
+                        <div class="alert-detail">
+                            <strong>TIME:</strong>
+                            14:03:17
+                        </div>
+                        <div class="alert-detail">
+                            <strong>WORKLOAD:</strong>
+                            tampered-app-xyz
+                        </div>
+                        <div class="alert-detail">
+                            <strong>REASON:</strong>
+                            Policy Violation (attestation failed)
+                        </div>
+                        <div class="alert-detail">
+                            <strong>ACTION:</strong>
+                            Key Not Released - AI Model Protected
+                        </div>
+                        <div class="alert-detail">
+                            <strong>STATUS:</strong>
+                            Attacker Blocked • CrashLoopBackOff
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gates-container">
+                    <div class="gate-card">
+                        <div class="gate-header">
+                            <div class="gate-icon">🔐</div>
+                            <div class="gate-title">Gate 1: Code Integrity</div>
+                        </div>
+                        <div class="gate-status status-passing">✅ PASSING</div>
+                        <div class="gate-description">Container signature valid (attacker used signed container)</div>
+                    </div>
+
+                    <div class="gate-card">
+                        <div class="gate-header">
+                            <div class="gate-icon">🛡️</div>
+                            <div class="gate-title">Gate 2: TEE Attestation</div>
+                        </div>
+                        <div class="gate-status status-failed">❌ FAILED</div>
+                        <div class="gate-description">Attestation failed - not running in genuine confidential environment</div>
+                    </div>
+                </div>
+
+                <div class="events-section">
+                    <h3 class="section-title">⚠️ Security Incident Log</h3>
+                    <div class="events-container">
+                        <div class="event-item event-failed">
+                            <div class="event-time">14:03:17</div>
+                            <div class="event-details">
+                                <div class="event-app">❌ tampered-app-xyz</div>
+                                <div class="event-status">ATTACK BLOCKED • Attestation failed • Key withheld</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-time">13:45:33</div>
+                            <div class="event-details">
+                                <div class="event-app">✅ janine-ai-model-v1.3</div>
+                                <div class="event-status">Normal operation - before attack attempt</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="refresh-info">
+                🔄 Dashboard updates automatically every 30 seconds<br>
+                🔒 Powered by Red Hat Trustee & Confidential Computing
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSuccessScenario() {
+            document.getElementById('success-scenario').classList.remove('hidden');
+            document.getElementById('attack-scenario').classList.add('hidden');
+        }
+
+        function showAttackScenario() {
+            document.getElementById('success-scenario').classList.add('hidden');
+            document.getElementById('attack-scenario').classList.remove('hidden');
+        }
+
+        // Auto-refresh simulation (would connect to real API in Phase 2)
+        setInterval(() => {
+            console.log('Dashboard refresh (Phase 1: Static data)');
+        }, 30000);
+    </script>
+</body>
+</html>

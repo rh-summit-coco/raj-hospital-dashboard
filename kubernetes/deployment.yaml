@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raj-hospital-dashboard
+  namespace: trustee-operator-system
+  labels:
+    app: raj-hospital-dashboard
+    component: compliance-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: raj-hospital-dashboard
+  template:
+    metadata:
+      labels:
+        app: raj-hospital-dashboard
+        component: compliance-dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: quay.io/rh-summit-cooc/raj-hospital-dashboard:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: raj-dashboard-service
+  namespace: trustee-operator-system
+  labels:
+    app: raj-hospital-dashboard
+spec:
+  selector:
+    app: raj-hospital-dashboard
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: raj-dashboard-route
+  namespace: trustee-operator-system
+  labels:
+    app: raj-hospital-dashboard
+spec:
+  to:
+    kind: Service
+    name: raj-dashboard-service
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+  wildcardPolicy: None
