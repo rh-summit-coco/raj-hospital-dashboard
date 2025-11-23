@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: raj-hospital-dashboard
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: raj-hospital-dashboard
+    app.kubernetes.io/component: compliance-dashboard
+    app.kubernetes.io/part-of: confidential-computing-demo
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rh-summit-coco/raj-hospital-dashboard.git
+    targetRevision: main
+    path: kubernetes
+    directory:
+      recurse: true
+      exclude: "configmap-deployment.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: raj-compliance-dashboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

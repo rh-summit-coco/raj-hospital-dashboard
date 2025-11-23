@@ -648,31 +648,61 @@
             </div>
 
             <div class="log-section">
-                <div class="log-section-title">🛡️ KBS (Key Broker Service) Logs</div>
+                <div class="log-section-title">🛡️ KBS (Key Broker Service) - Raw Logs</div>
                 <div class="log-content">
-<span class="log-timestamp">2025-11-22 14:03:17.123</span> <span class="log-info">[INFO]</span> KBS: Received attestation request for workload: tampered-app-xyz
-<span class="log-timestamp">2025-11-22 14:03:17.124</span> <span class="log-info">[INFO]</span> KBS: Validating workload signature against policy
-<span class="log-timestamp">2025-11-22 14:03:17.125</span> <span class="log-info">[INFO]</span> KBS: ✅ Gate 1 PASSED - Container signature valid (signed by trusted key)
-<span class="log-timestamp">2025-11-22 14:03:17.126</span> <span class="log-info">[INFO]</span> KBS: Initiating TEE attestation verification
-<span class="log-timestamp">2025-11-22 14:03:17.234</span> <span class="log-error">[ERROR]</span> KBS: ❌ Gate 2 FAILED - TEE attestation verification failed
-<span class="log-timestamp">2025-11-22 14:03:17.235</span> <span class="log-error">[ERROR]</span> KBS: Hardware attestation mismatch detected
-<span class="log-timestamp">2025-11-22 14:03:17.236</span> <span class="log-error">[ERROR]</span> KBS: Expected TDX/SEV-SNP environment, found standard VM
-<span class="log-timestamp">2025-11-22 14:03:17.237</span> <span class="log-error">[ERROR]</span> KBS: SECURITY VIOLATION - Potential attestation bypass attempt
-<span class="log-timestamp">2025-11-22 14:03:17.238</span> <span class="log-error">[ERROR]</span> KBS: KEY RELEASE DENIED - janine-ai-model encryption key withheld
-<span class="log-timestamp">2025-11-22 14:03:17.239</span> <span class="log-info">[INFO]</span> KBS: Incident logged for compliance audit trail
+<span class="log-timestamp">[2025-11-22T14:03:17.123Z INFO  kbs::api_server]</span> <span class="log-info">Incoming request: GET /kbs/v0/resource/default/secrets/janine-ai-model-key</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.124Z INFO  kbs::policy]</span> <span class="log-info">Evaluating policy for resource access</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.125Z INFO  kbs::auth]</span> <span class="log-info">Container signature verification: PASSED</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.126Z INFO  attestation_service]</span> <span class="log-info">Initiating TEE attestation verification</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.234Z ERROR attestation_service::error]</span> <span class="log-error">AttestationFailed</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.235Z ERROR kbs::error]</span> <span class="log-error">PolicyViolation</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.236Z ERROR kbs::policy]</span> <span class="log-error">Hardware measurement mismatch</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.237Z ERROR kbs::error]</span> <span class="log-error">TokenNotFound</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.238Z INFO  actix_web::middleware::logger]</span> <span class="log-error">10.128.2.89 "GET /kbs/v0/resource/default/secrets/janine-ai-model-key HTTP/1.1" 401 117 "-" "workload/1.0" 0.115432</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.239Z INFO  kbs::audit]</span> <span class="log-info">Security incident logged</span>
                 </div>
             </div>
 
             <div class="log-section">
-                <div class="log-section-title">🔍 RVPS (Reference Value Provider) Logs</div>
+                <div class="log-section-title">📖 Translation - What This Means</div>
+                <div class="log-content" style="background: #f0f8ff; border-left: 4px solid var(--hospital-primary);">
+<span class="log-timestamp">14:03:17.123</span> <span class="log-info">🔍 Workload "tampered-app-xyz" requests AI model decryption key</span>
+<span class="log-timestamp">14:03:17.124</span> <span class="log-info">🔍 KBS checks if this request is allowed by security policy</span>
+<span class="log-timestamp">14:03:17.125</span> <span class="log-info">✅ Gate 1 PASSED: Container signature is valid (trusted source)</span>
+<span class="log-timestamp">14:03:17.126</span> <span class="log-info">🔍 Now checking Gate 2: Is this a genuine confidential environment?</span>
+<span class="log-timestamp">14:03:17.234</span> <span class="log-error">❌ Gate 2 FAILED: TEE attestation verification failed</span>
+<span class="log-timestamp">14:03:17.235</span> <span class="log-error">❌ Policy violated: Workload not running in approved hardware</span>
+<span class="log-timestamp">14:03:17.236</span> <span class="log-error">❌ Expected: TDX/SEV-SNP confidential VM. Found: Standard VM</span>
+<span class="log-timestamp">14:03:17.237</span> <span class="log-error">🚨 SECURITY DECISION: Deny key access (attack blocked)</span>
+<span class="log-timestamp">14:03:17.238</span> <span class="log-error">🔒 HTTP 401 Unauthorized - AI model remains encrypted</span>
+<span class="log-timestamp">14:03:17.239</span> <span class="log-info">📝 Incident recorded for Raj's compliance audit</span>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-section-title">🔍 RVPS (Reference Value Provider) - Raw Logs</div>
                 <div class="log-content">
-<span class="log-timestamp">2025-11-22 14:03:17.127</span> <span class="log-info">[INFO]</span> RVPS: Received attestation verification request
-<span class="log-timestamp">2025-11-22 14:03:17.128</span> <span class="log-info">[INFO]</span> RVPS: Checking policy rules for workload: tampered-app-xyz
-<span class="log-timestamp">2025-11-22 14:03:17.129</span> <span class="log-info">[INFO]</span> RVPS: Policy requires: Confidential VM with hardware attestation
-<span class="log-timestamp">2025-11-22 14:03:17.200</span> <span class="log-error">[ERROR]</span> RVPS: Attestation evidence validation FAILED
-<span class="log-timestamp">2025-11-22 14:03:17.201</span> <span class="log-error">[ERROR]</span> RVPS: Runtime measurements do not match reference values
-<span class="log-timestamp">2025-11-22 14:03:17.202</span> <span class="log-error">[ERROR]</span> RVPS: TCB (Trusted Computing Base) integrity compromised
-<span class="log-timestamp">2025-11-22 14:03:17.233</span> <span class="log-error">[ERROR]</span> RVPS: Returning ATTESTATION_FAILED to KBS
+<span class="log-timestamp">[2025-11-22T14:03:17.127Z INFO  attestation_service::rvps]</span> <span class="log-info">Attestation verification request received</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.128Z INFO  rvps::policy_engine]</span> <span class="log-info">Loading policy: default_policy.rego</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.129Z INFO  rvps::verifier]</span> <span class="log-info">Expected platform: TDX-CVM</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.200Z ERROR rvps::evidence]</span> <span class="log-error">ValidationError: EvidenceMismatch</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.201Z ERROR rvps::measurement]</span> <span class="log-error">PCR mismatch detected</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.202Z ERROR rvps::tcb]</span> <span class="log-error">TCB verification failed</span>
+<span class="log-timestamp">[2025-11-22T14:03:17.233Z ERROR rvps::verifier]</span> <span class="log-error">AttestationResult: FAILED</span>
+                </div>
+
+                <div style="margin-top: 15px; padding: 15px; background: #fff8dc; border-radius: 8px; border-left: 4px solid #ffa500;">
+                    <div style="font-weight: 600; color: #ff8c00; margin-bottom: 8px;">🔬 Technical Translation:</div>
+                    <div style="font-size: 0.9rem; line-height: 1.5;">
+                        <strong>RVPS</strong> validates that the requesting workload is running in a genuine confidential environment by:
+                        <ul style="margin: 10px 0 0 20px;">
+                            <li><strong>Policy Check:</strong> Loads rules requiring TDX-CVM platform</li>
+                            <li><strong>Evidence Validation:</strong> Compares runtime measurements with trusted reference values</li>
+                            <li><strong>PCR Verification:</strong> Platform Configuration Registers don't match expected values</li>
+                            <li><strong>TCB Assessment:</strong> Trusted Computing Base integrity check fails</li>
+                        </ul>
+                        <strong>Result:</strong> ❌ Attestation FAILED - workload is not in approved confidential environment
+                    </div>
                 </div>
             </div>
 

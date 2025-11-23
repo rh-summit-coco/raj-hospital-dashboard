@@ -72,6 +72,29 @@ podman tag raj-hospital-dashboard:latest quay.io/rh-summit-cooc/raj-hospital-das
 podman push quay.io/rh-summit-cooc/raj-hospital-dashboard:latest
 ```
 
+## CI/CD Architecture
+
+### 🔄 Tekton Pipeline
+Automated CI/CD pipeline includes:
+- **S2I Build**: Nginx container build from source
+- **Security Scanning**: Container vulnerability assessment
+- **Automated Testing**: Dashboard functionality validation
+- **GitHub Webhooks**: Triggered on code commits
+- **Multi-environment**: Dev → Staging → Production
+
+### 🚀 ArgoCD GitOps
+GitOps deployment strategy:
+- **Dev Environment**: Auto-sync from `main` branch
+- **Staging Environment**: Auto-sync with validation
+- **Production Environment**: Manual approval + tagged releases
+- **Drift Detection**: Automatic remediation
+- **Rollback Capability**: One-click previous versions
+
+### 📊 URLs
+- **Dashboard**: http://raj-dashboard-raj-compliance-dashboard.apps.uhfgfgde.eastus.aroapp.io
+- **ArgoCD**: https://openshift-gitops-server-openshift-gitops.apps.uhfgfgde.eastus.aroapp.io
+- **Tekton Console**: OpenShift Console → Pipelines
+
 ## Demo Usage
 
 ### Scenario 1: Normal Operations
@@ -85,6 +108,13 @@ podman push quay.io/rh-summit-cooc/raj-hospital-dashboard:latest
 2. Shows red alert with security violation details
 3. Gate 1 passes (signed container) but Gate 2 fails (attestation)
 4. Clear incident details: timestamp, workload, reason, action taken
+
+### CI/CD Demo Flow
+1. **Make a code change** and commit to GitHub
+2. **Tekton pipeline** automatically triggers
+3. **Build completes** and deploys to development
+4. **ArgoCD syncs** changes to staging environment
+5. **Manual promotion** to production after validation
 
 ## Demo Story Integration
 
