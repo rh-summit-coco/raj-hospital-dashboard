@@ -294,6 +294,166 @@
         .hidden {
             display: none !important;
         }
+
+        /* Modal styles for Trustee logs */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--hospital-light);
+        }
+
+        .modal-title {
+            color: var(--hospital-danger);
+            font-size: 1.5rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .modal-close {
+            background: var(--hospital-light);
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--hospital-danger);
+            color: white;
+        }
+
+        .log-section {
+            margin-bottom: 25px;
+        }
+
+        .log-section-title {
+            color: var(--hospital-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .log-error {
+            color: var(--hospital-danger);
+            font-weight: 500;
+        }
+
+        .log-info {
+            color: var(--hospital-primary);
+        }
+
+        .log-timestamp {
+            color: #666;
+        }
+
+        .clickable-event {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .clickable-event:hover {
+            background: rgba(220, 53, 69, 0.1) !important;
+            transform: translateX(8px);
+        }
+
+        .investigation-summary {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+            border-left: 4px solid var(--hospital-danger);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .summary-title {
+            color: var(--hospital-danger);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .summary-label {
+            font-weight: 500;
+            color: var(--hospital-text);
+            font-size: 0.9rem;
+        }
+
+        .summary-value {
+            color: var(--hospital-danger);
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -432,11 +592,11 @@
                 <div class="events-section">
                     <h3 class="section-title">⚠️ Security Incident Log</h3>
                     <div class="events-container">
-                        <div class="event-item event-failed">
+                        <div class="event-item event-failed clickable-event" onclick="showTrusteeLog()">
                             <div class="event-time">14:03:17</div>
                             <div class="event-details">
                                 <div class="event-app">❌ tampered-app-xyz</div>
-                                <div class="event-status">ATTACK BLOCKED • Attestation failed • Key withheld</div>
+                                <div class="event-status">ATTACK BLOCKED • Attestation failed • Key withheld • <strong>Click for details</strong></div>
                             </div>
                         </div>
                         <div class="event-item">
@@ -457,6 +617,80 @@
         </div>
     </div>
 
+    <!-- Trustee Log Investigation Modal -->
+    <div id="trustee-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">🔍 Security Incident Investigation</div>
+                <button class="modal-close" onclick="hideTrusteeLog()">×</button>
+            </div>
+
+            <div class="investigation-summary">
+                <div class="summary-title">📊 Incident Summary</div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-label">Workload</div>
+                        <div class="summary-value">tampered-app-xyz</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Attack Vector</div>
+                        <div class="summary-value">TEE Attestation Bypass</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Policy Violated</div>
+                        <div class="summary-value">Hardware Root of Trust</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Action Taken</div>
+                        <div class="summary-value">Key Release Denied</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-section-title">🛡️ KBS (Key Broker Service) Logs</div>
+                <div class="log-content">
+<span class="log-timestamp">2025-11-22 14:03:17.123</span> <span class="log-info">[INFO]</span> KBS: Received attestation request for workload: tampered-app-xyz
+<span class="log-timestamp">2025-11-22 14:03:17.124</span> <span class="log-info">[INFO]</span> KBS: Validating workload signature against policy
+<span class="log-timestamp">2025-11-22 14:03:17.125</span> <span class="log-info">[INFO]</span> KBS: ✅ Gate 1 PASSED - Container signature valid (signed by trusted key)
+<span class="log-timestamp">2025-11-22 14:03:17.126</span> <span class="log-info">[INFO]</span> KBS: Initiating TEE attestation verification
+<span class="log-timestamp">2025-11-22 14:03:17.234</span> <span class="log-error">[ERROR]</span> KBS: ❌ Gate 2 FAILED - TEE attestation verification failed
+<span class="log-timestamp">2025-11-22 14:03:17.235</span> <span class="log-error">[ERROR]</span> KBS: Hardware attestation mismatch detected
+<span class="log-timestamp">2025-11-22 14:03:17.236</span> <span class="log-error">[ERROR]</span> KBS: Expected TDX/SEV-SNP environment, found standard VM
+<span class="log-timestamp">2025-11-22 14:03:17.237</span> <span class="log-error">[ERROR]</span> KBS: SECURITY VIOLATION - Potential attestation bypass attempt
+<span class="log-timestamp">2025-11-22 14:03:17.238</span> <span class="log-error">[ERROR]</span> KBS: KEY RELEASE DENIED - janine-ai-model encryption key withheld
+<span class="log-timestamp">2025-11-22 14:03:17.239</span> <span class="log-info">[INFO]</span> KBS: Incident logged for compliance audit trail
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-section-title">🔍 RVPS (Reference Value Provider) Logs</div>
+                <div class="log-content">
+<span class="log-timestamp">2025-11-22 14:03:17.127</span> <span class="log-info">[INFO]</span> RVPS: Received attestation verification request
+<span class="log-timestamp">2025-11-22 14:03:17.128</span> <span class="log-info">[INFO]</span> RVPS: Checking policy rules for workload: tampered-app-xyz
+<span class="log-timestamp">2025-11-22 14:03:17.129</span> <span class="log-info">[INFO]</span> RVPS: Policy requires: Confidential VM with hardware attestation
+<span class="log-timestamp">2025-11-22 14:03:17.200</span> <span class="log-error">[ERROR]</span> RVPS: Attestation evidence validation FAILED
+<span class="log-timestamp">2025-11-22 14:03:17.201</span> <span class="log-error">[ERROR]</span> RVPS: Runtime measurements do not match reference values
+<span class="log-timestamp">2025-11-22 14:03:17.202</span> <span class="log-error">[ERROR]</span> RVPS: TCB (Trusted Computing Base) integrity compromised
+<span class="log-timestamp">2025-11-22 14:03:17.233</span> <span class="log-error">[ERROR]</span> RVPS: Returning ATTESTATION_FAILED to KBS
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-section-title">⚙️ OpenShift Workload Status</div>
+                <div class="log-content">
+<span class="log-timestamp">2025-11-22 14:03:18.000</span> <span class="log-info">[INFO]</span> Pod tampered-app-xyz-7d9f8c-abcd started
+<span class="log-timestamp">2025-11-22 14:03:19.500</span> <span class="log-error">[ERROR]</span> Pod tampered-app-xyz-7d9f8c-abcd: Init container failed
+<span class="log-timestamp">2025-11-22 14:03:19.501</span> <span class="log-error">[ERROR]</span> Init container exit code: 1 (Key retrieval failed)
+<span class="log-timestamp">2025-11-22 14:03:20.000</span> <span class="log-info">[INFO]</span> Pod tampered-app-xyz-7d9f8c-abcd: Restarting (attempt 1)
+<span class="log-timestamp">2025-11-22 14:03:25.000</span> <span class="log-error">[ERROR]</span> Pod tampered-app-xyz-7d9f8c-abcd: Init container failed again
+<span class="log-timestamp">2025-11-22 14:03:30.000</span> <span class="log-info">[INFO]</span> Pod tampered-app-xyz-7d9f8c-abcd: Status = CrashLoopBackOff
+<span class="log-timestamp">2025-11-22 14:03:30.001</span> <span class="log-info">[INFO]</span> 🛡️ ATTACK SUCCESSFULLY BLOCKED - AI model remains encrypted
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function showSuccessScenario() {
             document.getElementById('success-scenario').classList.remove('hidden');
@@ -472,6 +706,31 @@
         setInterval(() => {
             console.log('Dashboard refresh (Phase 1: Static data)');
         }, 30000);
+
+        // Trustee log investigation modal
+        function showTrusteeLog() {
+            document.getElementById('trustee-modal').classList.add('show');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function hideTrusteeLog() {
+            document.getElementById('trustee-modal').classList.remove('show');
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('trustee-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideTrusteeLog();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideTrusteeLog();
+            }
+        });
     </script>
 </body>
 </html>
