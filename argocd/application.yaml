@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: raj-hospital-dashboard
-  namespace: argocd
+  namespace: openshift-gitops
   labels:
     app.kubernetes.io/name: raj-hospital-dashboard
     app.kubernetes.io/component: compliance-dashboard
@@ -54,7 +54,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: confidential-computing
-  namespace: argocd
+  namespace: openshift-gitops
 spec:
   description: "Project for Red Hat Summit Confidential Computing demo applications"
   sourceRepos:
@@ -106,7 +106,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: raj-dashboard-staging
-  namespace: argocd
+  namespace: openshift-gitops
   labels:
     app.kubernetes.io/name: raj-hospital-dashboard
     app.kubernetes.io/component: compliance-dashboard
@@ -149,7 +149,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: raj-dashboard-production
-  namespace: argocd
+  namespace: openshift-gitops
   labels:
     app.kubernetes.io/name: raj-hospital-dashboard
     app.kubernetes.io/component: compliance-dashboard

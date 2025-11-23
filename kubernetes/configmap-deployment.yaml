@@ -38,6 +38,14 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
+        volumeMounts:
+        - name: html-content
+          mountPath: /opt/app-root/src/index.html
+          subPath: index.html
+      volumes:
+      - name: html-content
+        configMap:
+          name: raj-dashboard-html
 ---
 apiVersion: v1
 kind: Service
