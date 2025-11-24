@@ -30,3 +30,35 @@ build/
 
 # Container build files
 .buildah/
+
+# ======================================
+# SECURITY - SECRETS AND CREDENTIALS
+# ======================================
+# NEVER commit these files!
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Secret files
+*secret*.yaml
+*secret*.yml
+*-secret.yaml
+*-secret.yml
+*credential*
+*password*
+*token*
+
+# SSH keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+# Local development overrides
+*-local.*
+local-*
+CLAUDE.md
