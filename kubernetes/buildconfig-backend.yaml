@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: raj-compliance-dashboard
+  labels:
+    app: raj-hospital-dashboard
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: raj-dashboard-backend
+  namespace: raj-compliance-dashboard
+  labels:
+    app: raj-hospital-dashboard
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: raj-dashboard-backend
+  namespace: raj-compliance-dashboard
+  labels:
+    app: raj-hospital-dashboard
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/jfreiman/summit-demo.git
+      ref: main
+    contextDir: raj-hospital-dashboard
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile.backend
+  output:
+    to:
+      kind: ImageStreamTag
+      name: raj-dashboard-backend:latest
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
