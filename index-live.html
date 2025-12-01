@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St. Mercy Hospital - Security Compliance Dashboard</title>
+    <style>
+        :root {
+            /* Hospital brand colors */
+            --hospital-primary: #1e4a72;      /* Deep medical blue */
+            --hospital-secondary: #2e8b87;    /* Teal green */
+            --hospital-accent: #f8f9fa;       /* Clean white */
+            --hospital-success: #28a745;      /* Medical green */
+            --hospital-warning: #ffc107;      /* Amber */
+            --hospital-danger: #dc3545;       /* Emergency red */
+            --hospital-light: #e9ecef;        /* Light gray */
+            --hospital-text: #2c3e50;         /* Dark blue-gray */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--hospital-accent) 0%, var(--hospital-light) 100%);
+            color: var(--hospital-text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--hospital-primary) 0%, var(--hospital-secondary) 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 4px 15px rgba(30, 74, 114, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .hospital-logo {
+            font-size: 3rem;
+        }
+
+        .header-text h1 {
+            font-size: 2.2rem;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+
+        .header-text p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .connection-status {
+            margin-left: auto;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .connection-live {
+            background: rgba(40, 167, 69, 0.3);
+            border: 1px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .connection-demo {
+            background: rgba(255, 193, 7, 0.3);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .dashboard-content {
+            background: white;
+            padding: 40px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-overview {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .overall-status {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.5s ease;
+        }
+
+        .status-compliant {
+            background: linear-gradient(135deg, var(--hospital-success) 0%, #20c997 100%);
+            color: white;
+        }
+
+        .status-violation {
+            background: linear-gradient(135deg, var(--hospital-danger) 0%, #e74c3c 100%);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-loading {
+            background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border: 2px solid var(--hospital-primary);
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            color: var(--hospital-primary);
+        }
+
+        .mode-btn.active {
+            background: var(--hospital-primary);
+            color: white;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .gates-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .gate-card {
+            background: var(--hospital-accent);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 5px solid var(--hospital-primary);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .gate-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .gate-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .gate-icon {
+            font-size: 2rem;
+        }
+
+        .gate-title {
+            font-size: 1.3rem;
+            color: var(--hospital-primary);
+            font-weight: 600;
+        }
+
+        .gate-status {
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .gate-description {
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .status-passing {
+            color: var(--hospital-success);
+        }
+
+        .status-failed {
+            color: var(--hospital-danger);
+        }
+
+        .status-unknown {
+            color: #6c757d;
+        }
+
+        .workloads-section {
+            margin-top: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--hospital-primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .workloads-container {
+            background: var(--hospital-light);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+        }
+
+        .workload-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--hospital-success);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .workload-item:hover {
+            transform: translateX(5px);
+        }
+
+        .workload-item.workload-failed {
+            border-left-color: var(--hospital-danger);
+            background: #fff5f5;
+        }
+
+        .workload-item.workload-unknown {
+            border-left-color: #6c757d;
+            background: #f8f9fa;
+        }
+
+        .workload-time {
+            font-weight: 600;
+            color: var(--hospital-primary);
+            min-width: 80px;
+        }
+
+        .workload-details {
+            flex: 1;
+        }
+
+        .workload-name {
+            font-weight: 500;
+            color: var(--hospital-text);
+        }
+
+        .workload-status {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .workload-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-attested {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--hospital-success);
+        }
+
+        .badge-failed {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--hospital-danger);
+        }
+
+        .badge-unknown {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, var(--hospital-danger) 0%, #e74c3c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .alert-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .alert-detail {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 15px;
+            border-radius: 6px;
+        }
+
+        .alert-detail strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .refresh-info {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .last-update {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Demo mode toggle buttons */
+        .demo-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .demo-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success {
+            background: var(--hospital-success);
+            color: white;
+        }
+
+        .btn-attack {
+            background: var(--hospital-danger);
+            color: white;
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Workload detail modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--hospital-light);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--hospital-primary);
+        }
+
+        .modal-close {
+            background: var(--hospital-light);
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--hospital-danger);
+            color: white;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: var(--hospital-text);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="hospital-logo">&#127973;</div>
+            <div class="header-text">
+                <h1>St. Mercy Hospital</h1>
+                <p>Security Compliance Dashboard | Confidential Computing Protection</p>
+            </div>
+            <div id="connection-status" class="connection-status connection-demo">
+                Demo Mode
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Mode Toggle -->
+            <div class="mode-toggle">
+                <button class="mode-btn" id="btn-live" onclick="setMode('live')">Live Mode</button>
+                <button class="mode-btn active" id="btn-demo" onclick="setMode('demo')">Demo Mode</button>
+            </div>
+
+            <!-- Demo Controls (only shown in demo mode) -->
+            <div id="demo-controls" class="demo-controls">
+                <button class="demo-btn btn-success" onclick="showDemoScenario('success')">Normal Operations</button>
+                <button class="demo-btn btn-attack" onclick="showDemoScenario('attack')">Security Incident</button>
+            </div>
+
+            <!-- Status Display -->
+            <div class="status-overview">
+                <div id="overall-status" class="overall-status status-loading">
+                    <span class="loading-spinner"></span> Loading...
+                </div>
+            </div>
+
+            <!-- Alert Box (for violations) -->
+            <div id="alert-box" class="alert-box hidden">
+                <div class="alert-title">
+                    &#128680; SECURITY VIOLATION DETECTED
+                </div>
+                <div id="alert-details" class="alert-details">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Security Gates -->
+            <div class="gates-container">
+                <div class="gate-card">
+                    <div class="gate-header">
+                        <div class="gate-icon">&#128272;</div>
+                        <div class="gate-title">Gate 1: Code Integrity</div>
+                    </div>
+                    <div id="gate1-status" class="gate-status status-unknown">-- CHECKING --</div>
+                    <div id="gate1-description" class="gate-description">Verifying container signatures...</div>
+                </div>
+
+                <div class="gate-card">
+                    <div class="gate-header">
+                        <div class="gate-icon">&#128737;</div>
+                        <div class="gate-title">Gate 2: TEE Attestation</div>
+                    </div>
+                    <div id="gate2-status" class="gate-status status-unknown">-- CHECKING --</div>
+                    <div id="gate2-description" class="gate-description">Verifying confidential environment...</div>
+                </div>
+            </div>
+
+            <!-- Workloads Section -->
+            <div class="workloads-section">
+                <h3 class="section-title">&#128203; Monitored Workloads</h3>
+                <div id="workloads-container" class="workloads-container">
+                    <div style="text-align: center; padding: 40px; color: #6c757d;">
+                        <span class="loading-spinner" style="border-color: #6c757d; border-top-color: var(--hospital-primary);"></span>
+                        Loading workloads...
+                    </div>
+                </div>
+            </div>
+
+            <div class="refresh-info">
+                &#128260; Dashboard updates every 30 seconds<br>
+                &#128274; Powered by Red Hat Trustee & Confidential Computing
+                <div id="last-update" class="last-update"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workload Detail Modal -->
+    <div id="workload-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-workload-name">Workload Details</div>
+                <button class="modal-close" onclick="hideWorkloadModal()">&times;</button>
+            </div>
+            <div id="modal-content">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard state
+        let currentMode = 'demo';
+        let currentDemoScenario = 'success';
+        let refreshInterval = null;
+
+        // API base URL
+        const API_BASE = '/api';
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            setMode('demo');
+            startAutoRefresh();
+        });
+
+        // Set dashboard mode (live or demo)
+        function setMode(mode) {
+            currentMode = mode;
+
+            // Update button states
+            document.getElementById('btn-live').classList.toggle('active', mode === 'live');
+            document.getElementById('btn-demo').classList.toggle('active', mode === 'demo');
+
+            // Show/hide demo controls
+            document.getElementById('demo-controls').classList.toggle('hidden', mode === 'live');
+
+            // Update connection status
+            const statusEl = document.getElementById('connection-status');
+            if (mode === 'live') {
+                statusEl.textContent = 'Live Mode';
+                statusEl.classList.remove('connection-demo');
+                statusEl.classList.add('connection-live');
+            } else {
+                statusEl.textContent = 'Demo Mode';
+                statusEl.classList.remove('connection-live');
+                statusEl.classList.add('connection-demo');
+            }
+
+            // Refresh data
+            refreshDashboard();
+        }
+
+        // Show demo scenario
+        function showDemoScenario(scenario) {
+            currentDemoScenario = scenario;
+            refreshDashboard();
+        }
+
+        // Start auto-refresh
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(refreshDashboard, 30000);
+        }
+
+        // Refresh dashboard data
+        async function refreshDashboard() {
+            if (currentMode === 'live') {
+                await fetchLiveData();
+            } else {
+                displayDemoData();
+            }
+            updateLastUpdate();
+        }
+
+        // Fetch live data from backend API
+        async function fetchLiveData() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayData(data);
+            } catch (error) {
+                console.error('Failed to fetch live data:', error);
+                displayError('Unable to connect to backend API');
+            }
+        }
+
+        // Display demo data
+        function displayDemoData() {
+            const demoData = getDemoData(currentDemoScenario);
+            displayData(demoData);
+        }
+
+        // Get demo data for scenario
+        function getDemoData(scenario) {
+            const now = new Date();
+
+            if (scenario === 'success') {
+                return {
+                    overall_status: 'compliant',
+                    workloads: [
+                        {
+                            name: 'janine-ai-model-v1.3',
+                            namespace: 'janine-dev',
+                            attested: true,
+                            attestation_status: 'verified',
+                            timestamp: new Date(now - 15*60*1000).toISOString(),
+                            details: 'TEE attestation successful',
+                            gate_one_status: 'passing',
+                            gate_two_status: 'passing'
+                        },
+                        {
+                            name: 'database-backup-service',
+                            namespace: 'janine-dev',
+                            attested: true,
+                            attestation_status: 'verified',
+                            timestamp: new Date(now - 45*60*1000).toISOString(),
+                            details: 'Container signature verified, TEE attestation passed',
+                            gate_one_status: 'passing',
+                            gate_two_status: 'passing'
+                        },
+                        {
+                            name: 'janine-ai-model-v1.2',
+                            namespace: 'janine-dev',
+                            attested: true,
+                            attestation_status: 'verified',
+                            timestamp: new Date(now - 90*60*1000).toISOString(),
+                            details: 'Previous model version - attestation successful',
+                            gate_one_status: 'passing',
+                            gate_two_status: 'passing'
+                        }
+                    ],
+                    last_updated: now.toISOString()
+                };
+            } else {
+                return {
+                    overall_status: 'violation',
+                    workloads: [
+                        {
+                            name: 'tampered-app-xyz',
+                            namespace: 'janine-dev',
+                            attested: false,
+                            attestation_status: 'failed',
+                            timestamp: new Date(now - 5*60*1000).toISOString(),
+                            details: 'TEE attestation failed - not running in genuine confidential environment',
+                            gate_one_status: 'passing',
+                            gate_two_status: 'failed'
+                        },
+                        {
+                            name: 'janine-ai-model-v1.3',
+                            namespace: 'janine-dev',
+                            attested: true,
+                            attestation_status: 'verified',
+                            timestamp: new Date(now - 20*60*1000).toISOString(),
+                            details: 'Normal operation - before attack attempt',
+                            gate_one_status: 'passing',
+                            gate_two_status: 'passing'
+                        }
+                    ],
+                    last_updated: now.toISOString()
+                };
+            }
+        }
+
+        // Display data in UI
+        function displayData(data) {
+            // Update overall status
+            const statusEl = document.getElementById('overall-status');
+            if (data.overall_status === 'compliant') {
+                statusEl.className = 'overall-status status-compliant';
+                statusEl.innerHTML = '&#128994; SYSTEM STATUS: COMPLIANT';
+                document.getElementById('alert-box').classList.add('hidden');
+            } else {
+                statusEl.className = 'overall-status status-violation';
+                statusEl.innerHTML = '&#128308; SECURITY VIOLATION DETECTED';
+                showViolationAlert(data.workloads);
+            }
+
+            // Update gates based on workload statuses
+            updateGates(data.workloads);
+
+            // Update workloads list
+            displayWorkloads(data.workloads);
+        }
+
+        // Update gate status display
+        function updateGates(workloads) {
+            let gate1Passing = true;
+            let gate2Passing = true;
+
+            workloads.forEach(w => {
+                if (w.gate_one_status === 'failed') gate1Passing = false;
+                if (w.gate_two_status === 'failed') gate2Passing = false;
+            });
+
+            // Gate 1
+            const gate1Status = document.getElementById('gate1-status');
+            const gate1Desc = document.getElementById('gate1-description');
+            if (gate1Passing) {
+                gate1Status.className = 'gate-status status-passing';
+                gate1Status.textContent = 'PASSING';
+                gate1Desc.textContent = 'Container signatures verified against trusted keys';
+            } else {
+                gate1Status.className = 'gate-status status-failed';
+                gate1Status.textContent = 'FAILED';
+                gate1Desc.textContent = 'Container signature verification failed';
+            }
+
+            // Gate 2
+            const gate2Status = document.getElementById('gate2-status');
+            const gate2Desc = document.getElementById('gate2-description');
+            if (gate2Passing) {
+                gate2Status.className = 'gate-status status-passing';
+                gate2Status.textContent = 'PASSING';
+                gate2Desc.textContent = 'Remote attestation successful - genuine confidential environment';
+            } else {
+                gate2Status.className = 'gate-status status-failed';
+                gate2Status.textContent = 'FAILED';
+                gate2Desc.textContent = 'Attestation failed - not running in genuine confidential environment';
+            }
+        }
+
+        // Display workloads list
+        function displayWorkloads(workloads) {
+            const container = document.getElementById('workloads-container');
+
+            if (!workloads || workloads.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6c757d;">No workloads configured</div>';
+                return;
+            }
+
+            container.innerHTML = workloads.map(w => {
+                const statusClass = w.attested ? '' : (w.attestation_status === 'failed' ? 'workload-failed' : 'workload-unknown');
+                const badgeClass = w.attested ? 'badge-attested' : (w.attestation_status === 'failed' ? 'badge-failed' : 'badge-unknown');
+                const icon = w.attested ? '&#9989;' : '&#10060;';
+                const time = formatTime(w.timestamp);
+
+                return `
+                    <div class="workload-item ${statusClass}" onclick="showWorkloadDetail('${w.name}', ${JSON.stringify(w).replace(/"/g, '&quot;')})">
+                        <div class="workload-time">${time}</div>
+                        <div class="workload-details">
+                            <div class="workload-name">${icon} ${w.name}</div>
+                            <div class="workload-status">${w.details}</div>
+                        </div>
+                        <span class="workload-badge ${badgeClass}">${w.attestation_status}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Show violation alert
+        function showViolationAlert(workloads) {
+            const failedWorkload = workloads.find(w => !w.attested);
+            if (!failedWorkload) return;
+
+            const alertBox = document.getElementById('alert-box');
+            const alertDetails = document.getElementById('alert-details');
+
+            alertDetails.innerHTML = `
+                <div class="alert-detail">
+                    <strong>WORKLOAD:</strong>
+                    ${failedWorkload.name}
+                </div>
+                <div class="alert-detail">
+                    <strong>NAMESPACE:</strong>
+                    ${failedWorkload.namespace}
+                </div>
+                <div class="alert-detail">
+                    <strong>STATUS:</strong>
+                    ${failedWorkload.attestation_status.toUpperCase()}
+                </div>
+                <div class="alert-detail">
+                    <strong>REASON:</strong>
+                    ${failedWorkload.details}
+                </div>
+                <div class="alert-detail">
+                    <strong>TIME:</strong>
+                    ${formatTime(failedWorkload.timestamp)}
+                </div>
+                <div class="alert-detail">
+                    <strong>ACTION:</strong>
+                    Key Not Released - Data Protected
+                </div>
+            `;
+
+            alertBox.classList.remove('hidden');
+        }
+
+        // Show workload detail modal
+        function showWorkloadDetail(name, workload) {
+            document.getElementById('modal-workload-name').textContent = name;
+
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Namespace</div>
+                        <div class="detail-value">${workload.namespace}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Attestation Status</div>
+                        <div class="detail-value" style="color: ${workload.attested ? 'var(--hospital-success)' : 'var(--hospital-danger)'}">${workload.attestation_status}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Gate 1 (Code Integrity)</div>
+                        <div class="detail-value" style="color: ${workload.gate_one_status === 'passing' ? 'var(--hospital-success)' : 'var(--hospital-danger)'}">${workload.gate_one_status.toUpperCase()}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Gate 2 (TEE Attestation)</div>
+                        <div class="detail-value" style="color: ${workload.gate_two_status === 'passing' ? 'var(--hospital-success)' : 'var(--hospital-danger)'}">${workload.gate_two_status.toUpperCase()}</div>
+                    </div>
+                    <div class="detail-item" style="grid-column: span 2">
+                        <div class="detail-label">Last Verified</div>
+                        <div class="detail-value">${new Date(workload.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div class="detail-item" style="grid-column: span 2">
+                        <div class="detail-label">Details</div>
+                        <div class="detail-value">${workload.details}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('workload-modal').classList.add('show');
+        }
+
+        // Hide workload modal
+        function hideWorkloadModal() {
+            document.getElementById('workload-modal').classList.remove('show');
+        }
+
+        // Display error state
+        function displayError(message) {
+            document.getElementById('overall-status').className = 'overall-status status-loading';
+            document.getElementById('overall-status').innerHTML = `&#9888; ${message}`;
+        }
+
+        // Update last update time
+        function updateLastUpdate() {
+            document.getElementById('last-update').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // Format timestamp to time string
+        function formatTime(timestamp) {
+            if (!timestamp) return '--:--:--';
+            return new Date(timestamp).toLocaleTimeString('en-US', { hour12: false });
+        }
+
+        // Close modal on outside click
+        document.getElementById('workload-modal').addEventListener('click', function(e) {
+            if (e.target === this) hideWorkloadModal();
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hideWorkloadModal();
+        });
+    </script>
+</body>
+</html>
