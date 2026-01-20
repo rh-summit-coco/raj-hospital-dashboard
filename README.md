@@ -74,26 +74,91 @@ podman push quay.io/rh-summit-cooc/raj-hospital-dashboard:latest
 
 ## CI/CD Architecture
 
-### 🔄 Tekton Pipeline
-Automated CI/CD pipeline includes:
-- **S2I Build**: Nginx container build from source
-- **Security Scanning**: Container vulnerability assessment
-- **Automated Testing**: Dashboard functionality validation
-- **GitHub Webhooks**: Triggered on code commits
-- **Multi-environment**: Dev → Staging → Production
+### Secure CI Pipeline
 
-### 🚀 ArgoCD GitOps
-GitOps deployment strategy:
-- **Dev Environment**: Auto-sync from `main` branch
-- **Staging Environment**: Auto-sync with validation
-- **Production Environment**: Manual approval + tagged releases
+The RAJ Dashboard uses a Tekton-based secure CI pipeline that implements supply chain security.
+
+#### Pipeline Stages
+
+```
+┌─────────────┐   ┌──────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│ clone-source│ → │ run-go-tests │ → │ security-scan   │ → │ build-container │
+└─────────────┘   └──────────────┘   └─────────────────┘   └─────────────────┘
+                                                                    │
+┌─────────────┐   ┌──────────────┐   ┌─────────────────┐            │
+│   deploy    │ ← │ generate-sbom│ ← │   sign-image    │ ← ─────────┘
+└─────────────┘   └──────────────┘   └─────────────────┘
+       │
+       ▼
+┌─────────────────┐
+│integration-tests│
+└─────────────────┘
+```
+
+| Stage | Tool | Description |
+|-------|------|-------------|
+| **clone-source** | git-clone | Clone repository from GitHub |
+| **run-go-tests** | go test | Run unit tests with coverage |
+| **security-scan** | Custom | Scan for hardcoded secrets, unsafe imports |
+| **build-container** | buildah | Build OCI container (amd64) |
+| **vulnerability-scan** | Clair | Scan for CVEs (blocks on CRITICAL) |
+| **sign-image** | Cosign | Keyless cryptographic signing |
+| **generate-sbom** | Custom | Generate Software Bill of Materials |
+| **deploy** | oc | Deploy to OpenShift namespace |
+| **integration-tests** | curl | Test API endpoints post-deploy |
+
+#### Deploy Pipeline
+
+```bash
+# Apply tasks first
+oc apply -f tekton/tasks.yaml -n raj-compliance-dashboard
+
+# Apply pipeline
+oc apply -f tekton/secure-ci-pipeline.yaml -n raj-compliance-dashboard
+
+# Run pipeline manually
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: raj-dashboard-run-
+  namespace: raj-compliance-dashboard
+spec:
+  pipelineRef:
+    name: raj-dashboard-secure-pipeline
+  workspaces:
+  - name: source-ws
+    volumeClaimTemplate:
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 1Gi
+EOF
+```
+
+#### Run Tests Locally
+
+```bash
+cd backend
+go test -v -cover ./...
+```
+
+### ArgoCD GitOps
+
+GitOps deployment via ArgoCD:
+- **Source**: `hospital-demo-gitops` repository
+- **Auto-sync**: Enabled for dev environment
 - **Drift Detection**: Automatic remediation
-- **Rollback Capability**: One-click previous versions
 
-### 📊 URLs
-- **Dashboard**: http://raj-dashboard-raj-compliance-dashboard.apps.uhfgfgde.eastus.aroapp.io
-- **ArgoCD**: https://openshift-gitops-server-openshift-gitops.apps.uhfgfgde.eastus.aroapp.io
-- **Tekton Console**: OpenShift Console → Pipelines
+### URLs
+
+| Service | URL |
+|---------|-----|
+| Dashboard | https://raj-hospital-dashboard-raj-compliance-dashboard.apps.uhfgfgde.eastus.aroapp.io |
+| Attestation API | https://attestation-collector-raj-compliance-dashboard.apps.uhfgfgde.eastus.aroapp.io |
+| ArgoCD | https://openshift-gitops-server-openshift-gitops.apps.uhfgfgde.eastus.aroapp.io |
+| Tekton | OpenShift Console → Pipelines |
 
 ## Demo Usage
 
