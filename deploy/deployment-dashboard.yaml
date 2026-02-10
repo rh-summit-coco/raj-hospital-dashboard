@@ -1,46 +1,11 @@
+# Dashboard backend (live UI + API) - use with Quay image
+# Set your image in the Deployment (e.g. quay.io/YOUR_ORG/raj-dashboard-backend:latest)
 apiVersion: v1
 kind: Namespace
 metadata:
   name: raj-compliance-dashboard
   labels:
     app: raj-hospital-dashboard
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: raj-dashboard-workloads
-  namespace: raj-compliance-dashboard
-  labels:
-    app: raj-hospital-dashboard
-data:
-  workloads.json: |
-    [
-      {
-        "name": "janine-ai-model-v1.3",
-        "namespace": "janine-dev",
-        "url": "https://janine-ai-model-sidecar.janine-dev.svc.cluster.local:8443"
-      },
-      {
-        "name": "database-backup-service",
-        "namespace": "janine-dev",
-        "url": "https://database-backup-sidecar.janine-dev.svc.cluster.local:8443"
-      }
-    ]
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: raj-dashboard-mtls-certs
-  namespace: raj-compliance-dashboard
-  labels:
-    app: raj-hospital-dashboard
-type: Opaque
-data:
-  # Placeholder - replace with actual base64-encoded certificates
-  # To generate: base64 -w0 client-cert.pem
-  client-cert.pem: ""
-  client-key.pem: ""
-  ca.pem: ""
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -63,28 +28,19 @@ spec:
     spec:
       containers:
       - name: dashboard
+        # Replace with your Quay image, e.g. quay.io/YOUR_ORG/raj-dashboard-backend:latest
+        # image: quay.io/eesposit/raj-dashboard-backend:latest
         image: image-registry.openshift-image-registry.svc:5000/raj-compliance-dashboard/raj-dashboard-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http
         env:
         - name: PORT
           value: "8080"
-        - name: WORKLOADS_CONFIG
-          value: "/config/workloads.json"
-        - name: TLS_CERT_FILE
-          value: "/certs/client-cert.pem"
-        - name: TLS_KEY_FILE
-          value: "/certs/client-key.pem"
-        - name: TLS_CA_FILE
-          value: "/certs/ca.pem"
-        volumeMounts:
-        - name: workloads-config
-          mountPath: /config
-          readOnly: true
-        - name: mtls-certs
-          mountPath: /certs
-          readOnly: true
+        # Use attestation-collector-secure if you deployed deploy/deployment.yaml (collector)
+        - name: COLLECTOR_URL
+          value: "http://attestation-collector-secure:8080"
         resources:
           requests:
             cpu: 50m
@@ -112,14 +68,6 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
-      volumes:
-      - name: workloads-config
-        configMap:
-          name: raj-dashboard-workloads
-      - name: mtls-certs
-        secret:
-          secretName: raj-dashboard-mtls-certs
-          optional: true  # Allow starting without certs (demo mode)
 ---
 apiVersion: v1
 kind: Service

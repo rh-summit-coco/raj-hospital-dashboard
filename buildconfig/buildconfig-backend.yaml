@@ -27,9 +27,9 @@ spec:
   source:
     type: Git
     git:
-      uri: https://github.com/jfreiman/summit-demo.git
+      uri: https://github.com/rh-summit-coco/raj-hospital-dashboard.git
       ref: main
-    contextDir: raj-hospital-dashboard
+    contextDir: .
   strategy:
     type: Docker
     dockerStrategy:
