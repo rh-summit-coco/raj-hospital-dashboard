@@ -513,23 +513,23 @@
                 <h1>St. Mercy Hospital</h1>
                 <p>Security Compliance Dashboard | Confidential Computing Protection</p>
             </div>
-            <div id="connection-status" class="connection-status connection-demo">
-                Demo Mode
+            <div id="connection-status" class="connection-status connection-live">
+                Live Mode
             </div>
         </div>
 
         <div class="dashboard-content">
-            <!-- Mode Toggle -->
-            <div class="mode-toggle">
+            <!-- Mode Toggle (demo disabled - comment back in to re-enable) -->
+            <!-- <div class="mode-toggle">
                 <button class="mode-btn" id="btn-live" onclick="setMode('live')">Live Mode</button>
                 <button class="mode-btn active" id="btn-demo" onclick="setMode('demo')">Demo Mode</button>
-            </div>
+            </div> -->
 
-            <!-- Demo Controls (only shown in demo mode) -->
-            <div id="demo-controls" class="demo-controls">
+            <!-- Demo Controls (only shown in demo mode) - commented out -->
+            <!-- <div id="demo-controls" class="demo-controls">
                 <button class="demo-btn btn-success" onclick="showDemoScenario('success')">Normal Operations</button>
                 <button class="demo-btn btn-attack" onclick="showDemoScenario('attack')">Security Incident</button>
-            </div>
+            </div> -->
 
             <!-- Status Display -->
             <div class="status-overview">
@@ -602,30 +602,31 @@
     </div>
 
     <script>
-        // Dashboard state
-        let currentMode = 'demo';
+        // Dashboard state (demo disabled - live only)
+        let currentMode = 'live';
         let currentDemoScenario = 'success';
         let refreshInterval = null;
 
         // API base URL
         const API_BASE = '/api';
 
-        // Initialize dashboard
+        // Initialize dashboard (always live - no demo)
         document.addEventListener('DOMContentLoaded', () => {
-            setMode('demo');
+            setMode('live');
             startAutoRefresh();
         });
 
-        // Set dashboard mode (live or demo)
+        // Set dashboard mode (live or demo; demo UI may be commented out)
         function setMode(mode) {
             currentMode = mode;
 
-            // Update button states
-            document.getElementById('btn-live').classList.toggle('active', mode === 'live');
-            document.getElementById('btn-demo').classList.toggle('active', mode === 'demo');
-
-            // Show/hide demo controls
-            document.getElementById('demo-controls').classList.toggle('hidden', mode === 'live');
+            // Update button states (elements may be commented out when demo disabled)
+            const btnLive = document.getElementById('btn-live');
+            const btnDemo = document.getElementById('btn-demo');
+            const demoControls = document.getElementById('demo-controls');
+            if (btnLive) btnLive.classList.toggle('active', mode === 'live');
+            if (btnDemo) btnDemo.classList.toggle('active', mode === 'demo');
+            if (demoControls) demoControls.classList.toggle('hidden', mode === 'live');
 
             // Update connection status
             const statusEl = document.getElementById('connection-status');
@@ -655,13 +656,13 @@
             refreshInterval = setInterval(refreshDashboard, 30000);
         }
 
-        // Refresh dashboard data
+        // Refresh dashboard data (demo path commented out - live only)
         async function refreshDashboard() {
-            if (currentMode === 'live') {
+            // if (currentMode === 'live') {
                 await fetchLiveData();
-            } else {
-                displayDemoData();
-            }
+            // } else {
+            //     displayDemoData();
+            // }
             updateLastUpdate();
         }
 
@@ -679,82 +680,36 @@
             }
         }
 
-        // Display demo data
-        function displayDemoData() {
-            const demoData = getDemoData(currentDemoScenario);
-            displayData(demoData);
-        }
+        // Display demo data (commented out - demo disabled)
+        // function displayDemoData() {
+        //     const demoData = getDemoData(currentDemoScenario);
+        //     displayData(demoData);
+        // }
 
-        // Get demo data for scenario
-        function getDemoData(scenario) {
-            const now = new Date();
-
-            if (scenario === 'success') {
-                return {
-                    overall_status: 'compliant',
-                    workloads: [
-                        {
-                            name: 'janine-ai-model-v1.3',
-                            namespace: 'janine-dev',
-                            attested: true,
-                            attestation_status: 'verified',
-                            timestamp: new Date(now - 15*60*1000).toISOString(),
-                            details: 'TEE attestation successful',
-                            gate_one_status: 'passing',
-                            gate_two_status: 'passing'
-                        },
-                        {
-                            name: 'database-backup-service',
-                            namespace: 'janine-dev',
-                            attested: true,
-                            attestation_status: 'verified',
-                            timestamp: new Date(now - 45*60*1000).toISOString(),
-                            details: 'Container signature verified, TEE attestation passed',
-                            gate_one_status: 'passing',
-                            gate_two_status: 'passing'
-                        },
-                        {
-                            name: 'janine-ai-model-v1.2',
-                            namespace: 'janine-dev',
-                            attested: true,
-                            attestation_status: 'verified',
-                            timestamp: new Date(now - 90*60*1000).toISOString(),
-                            details: 'Previous model version - attestation successful',
-                            gate_one_status: 'passing',
-                            gate_two_status: 'passing'
-                        }
-                    ],
-                    last_updated: now.toISOString()
-                };
-            } else {
-                return {
-                    overall_status: 'violation',
-                    workloads: [
-                        {
-                            name: 'tampered-app-xyz',
-                            namespace: 'janine-dev',
-                            attested: false,
-                            attestation_status: 'failed',
-                            timestamp: new Date(now - 5*60*1000).toISOString(),
-                            details: 'TEE attestation failed - not running in genuine confidential environment',
-                            gate_one_status: 'passing',
-                            gate_two_status: 'failed'
-                        },
-                        {
-                            name: 'janine-ai-model-v1.3',
-                            namespace: 'janine-dev',
-                            attested: true,
-                            attestation_status: 'verified',
-                            timestamp: new Date(now - 20*60*1000).toISOString(),
-                            details: 'Normal operation - before attack attempt',
-                            gate_one_status: 'passing',
-                            gate_two_status: 'passing'
-                        }
-                    ],
-                    last_updated: now.toISOString()
-                };
-            }
-        }
+        // Get demo data for scenario (commented out - demo disabled)
+        // function getDemoData(scenario) {
+        //     const now = new Date();
+        //     if (scenario === 'success') {
+        //         return {
+        //             overall_status: 'compliant',
+        //             workloads: [
+        //                 { name: 'janine-ai-model-v1.3', namespace: 'janine-dev', attested: true, attestation_status: 'verified', timestamp: new Date(now - 15*60*1000).toISOString(), details: 'TEE attestation successful', gate_one_status: 'passing', gate_two_status: 'passing' },
+        //                 { name: 'database-backup-service', namespace: 'janine-dev', attested: true, attestation_status: 'verified', timestamp: new Date(now - 45*60*1000).toISOString(), details: 'Container signature verified, TEE attestation passed', gate_one_status: 'passing', gate_two_status: 'passing' },
+        //                 { name: 'janine-ai-model-v1.2', namespace: 'janine-dev', attested: true, attestation_status: 'verified', timestamp: new Date(now - 90*60*1000).toISOString(), details: 'Previous model version - attestation successful', gate_one_status: 'passing', gate_two_status: 'passing' }
+        //             ],
+        //             last_updated: now.toISOString()
+        //         };
+        //     } else {
+        //         return {
+        //             overall_status: 'violation',
+        //             workloads: [
+        //                 { name: 'tampered-app-xyz', namespace: 'janine-dev', attested: false, attestation_status: 'failed', timestamp: new Date(now - 5*60*1000).toISOString(), details: 'TEE attestation failed - not running in genuine confidential environment', gate_one_status: 'passing', gate_two_status: 'failed' },
+        //                 { name: 'janine-ai-model-v1.3', namespace: 'janine-dev', attested: true, attestation_status: 'verified', timestamp: new Date(now - 20*60*1000).toISOString(), details: 'Normal operation - before attack attempt', gate_one_status: 'passing', gate_two_status: 'passing' }
+        //             ],
+        //             last_updated: now.toISOString()
+        //         };
+        //     }
+        // }
 
         // Display data in UI
         function displayData(data) {
