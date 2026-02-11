@@ -28,7 +28,7 @@ spec:
     type: Git
     git:
       uri: https://github.com/rh-summit-coco/raj-hospital-dashboard.git
-      ref: ema
+      ref: prod
     contextDir: .
   strategy:
     type: Docker
