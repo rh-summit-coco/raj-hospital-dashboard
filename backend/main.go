@@ -18,8 +18,8 @@ type WorkloadStatus struct {
 	AttestationStatus string    `json:"attestation_status"`
 	Timestamp         string    `json:"timestamp"`
 	Details           string    `json:"details"`
-	GateOneStatus     string    `json:"gate_one_status"`  // Code Integrity
-	GateTwoStatus     string    `json:"gate_two_status"`  // TEE Attestation
+	GateOneStatus     string    `json:"gate_one_status"` // Code Integrity
+	GateTwoStatus     string    `json:"gate_two_status"` // TEE Attestation
 	LastChecked       time.Time `json:"last_checked"`
 	TEEType           string    `json:"tee_type,omitempty"`
 }
@@ -123,10 +123,10 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If no workloads configured, return demo data
-	if len(response.Workloads) == 0 {
-		response = getDemoResponse()
-	}
+	// If no workloads configured, return demo data (commented out - use real data only)
+	// if len(response.Workloads) == 0 {
+	// 	response = getDemoResponse()
+	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
@@ -142,10 +142,10 @@ func (s *Server) handleWorkloads(w http.ResponseWriter, r *http.Request) {
 		workloads = append(workloads, *status)
 	}
 
-	// If no workloads configured, return demo data
-	if len(workloads) == 0 {
-		workloads = getDemoResponse().Workloads
-	}
+	// If no workloads configured, return demo data (commented out - use real data only)
+	// if len(workloads) == 0 {
+	// 	workloads = getDemoResponse().Workloads
+	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(workloads)
@@ -282,37 +282,37 @@ func trustTierToString(tier int) string {
 	}
 }
 
-// getDemoResponse returns demo data when no real workloads are configured
-func getDemoResponse() DashboardResponse {
-	return DashboardResponse{
-		OverallStatus: "compliant",
-		Workloads: []WorkloadStatus{
-			{
-				Name:              "janine-ai-model-v1.3",
-				Namespace:         "janine-dev",
-				Attested:          true,
-				AttestationStatus: "verified",
-				Timestamp:         time.Now().Add(-15 * time.Minute).Format(time.RFC3339),
-				Details:           "TEE attestation successful",
-				GateOneStatus:     "passing",
-				GateTwoStatus:     "passing",
-				LastChecked:       time.Now(),
-			},
-			{
-				Name:              "database-backup-service",
-				Namespace:         "janine-dev",
-				Attested:          true,
-				AttestationStatus: "verified",
-				Timestamp:         time.Now().Add(-45 * time.Minute).Format(time.RFC3339),
-				Details:           "Container signature verified, TEE attestation passed",
-				GateOneStatus:     "passing",
-				GateTwoStatus:     "passing",
-				LastChecked:       time.Now(),
-			},
-		},
-		LastUpdated: time.Now(),
-	}
-}
+// getDemoResponse returns demo data when no real workloads are configured (commented out - demo/fake pods disabled)
+// func getDemoResponse() DashboardResponse {
+// 	return DashboardResponse{
+// 		OverallStatus: "compliant",
+// 		Workloads: []WorkloadStatus{
+// 			{
+// 				Name:              "janine-ai-model-v1.3",
+// 				Namespace:         "janine-dev",
+// 				Attested:          true,
+// 				AttestationStatus: "verified",
+// 				Timestamp:         time.Now().Add(-15 * time.Minute).Format(time.RFC3339),
+// 				Details:           "TEE attestation successful",
+// 				GateOneStatus:     "passing",
+// 				GateTwoStatus:     "passing",
+// 				LastChecked:       time.Now(),
+// 			},
+// 			{
+// 				Name:              "database-backup-service",
+// 				Namespace:         "janine-dev",
+// 				Attested:          true,
+// 				AttestationStatus: "verified",
+// 				Timestamp:         time.Now().Add(-45 * time.Minute).Format(time.RFC3339),
+// 				Details:           "Container signature verified, TEE attestation passed",
+// 				GateOneStatus:     "passing",
+// 				GateTwoStatus:     "passing",
+// 				LastChecked:       time.Now(),
+// 			},
+// 		},
+// 		LastUpdated: time.Now(),
+// 	}
+// }
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
