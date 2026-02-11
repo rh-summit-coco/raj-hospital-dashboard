@@ -186,35 +186,39 @@ func (s *Server) pollCollector() {
 	}
 }
 
-// fetchFromCollector fetches all attestation reports from the Collector API
+// fetchFromCollector fetches all attestation reports from the Collector API.
+// On any failure (network, non-200, decode error) the cache is cleared so the
+// dashboard only ever shows workloads from the last successful report—pods
+// not in the report do not appear.
 func (s *Server) fetchFromCollector() {
 	url := fmt.Sprintf("%s/api/v1/reports", s.collectorURL)
 
 	resp, err := s.httpClient.Get(url)
 	if err != nil {
 		log.Printf("Failed to fetch from Collector: %v", err)
+		s.clearCache()
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Collector returned status %d", resp.StatusCode)
+		s.clearCache()
 		return
 	}
 
 	var reports []CollectorReport
 	if err := json.NewDecoder(resp.Body).Decode(&reports); err != nil {
 		log.Printf("Failed to decode Collector response: %v", err)
+		s.clearCache()
 		return
 	}
 
 	log.Printf("Fetched %d reports from Collector", len(reports))
 
-	// Convert Collector reports to WorkloadStatus and update cache
+	// Replace cache with only what the collector reported—pods not in the report are not shown
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
-
-	// Clear old cache and repopulate
 	s.statusCache = make(map[string]*WorkloadStatus)
 
 	for _, report := range reports {
@@ -222,6 +226,13 @@ func (s *Server) fetchFromCollector() {
 		key := report.Namespace + "/" + report.PodName
 		s.statusCache[key] = status
 	}
+}
+
+// clearCache clears the workload cache so the dashboard shows no workloads until the next successful fetch.
+func (s *Server) clearCache() {
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+	s.statusCache = make(map[string]*WorkloadStatus)
 }
 
 // convertCollectorReport converts a Collector report to WorkloadStatus
