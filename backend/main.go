@@ -58,13 +58,14 @@ type CollectorReport struct {
 
 // Server holds the dashboard backend state
 type Server struct {
-	collectorURL       string
-	statusCache        map[string]*WorkloadStatus
-	cacheMutex         sync.RWMutex
-	httpClient         *http.Client
-	pollInterval       time.Duration
+	collectorURL        string
+	statusCache         map[string]*WorkloadStatus
+	cacheMutex          sync.RWMutex
+	httpClient          *http.Client
+	pollInterval        time.Duration
 	lastSuccessfulFetch time.Time
-	staleThreshold     time.Duration
+	staleThreshold      time.Duration
+	maxWorkloadAge      time.Duration // hide workloads older than this (report timestamp)
 }
 
 func main() {
@@ -73,6 +74,7 @@ func main() {
 	// Load configuration - get Collector URL from environment
 	collectorURL := getEnv("COLLECTOR_URL", "http://attestation-collector:8080")
 	staleSec := getEnvInt("CACHE_STALE_AFTER_SECONDS", 90)
+	maxAgeSec := getEnvInt("CACHE_MAX_WORKLOAD_AGE_SECONDS", 3600) // default 1 hour: don't show reports older than this
 
 	server := &Server{
 		collectorURL:        collectorURL,
@@ -80,6 +82,7 @@ func main() {
 		pollInterval:        30 * time.Second,
 		httpClient:          &http.Client{Timeout: 10 * time.Second},
 		staleThreshold:      time.Duration(staleSec) * time.Second,
+		maxWorkloadAge:      time.Duration(maxAgeSec) * time.Second,
 	}
 
 	log.Printf("Configured to fetch from Attestation Collector: %s", collectorURL)
@@ -129,6 +132,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		LastUpdated:   time.Now(),
 	}
 	for _, status := range s.statusCache {
+		if !s.isWorkloadRecent(status) {
+			continue
+		}
 		response.Workloads = append(response.Workloads, *status)
 		if !status.Attested || status.GateTwoStatus == "failed" {
 			response.OverallStatus = "violation"
@@ -154,7 +160,9 @@ func (s *Server) handleWorkloads(w http.ResponseWriter, r *http.Request) {
 
 	workloads := make([]WorkloadStatus, 0, len(s.statusCache))
 	for _, status := range s.statusCache {
-		workloads = append(workloads, *status)
+		if s.isWorkloadRecent(status) {
+			workloads = append(workloads, *status)
+		}
 	}
 	s.cacheMutex.RUnlock()
 
@@ -174,6 +182,7 @@ func (s *Server) handleWorkloadDetail(w http.ResponseWriter, r *http.Request) {
 	s.cacheMutex.RLock()
 	stale := s.isCacheStaleLocked()
 	status, exists := s.statusCache[name]
+	recent := exists && s.isWorkloadRecent(status)
 	s.cacheMutex.RUnlock()
 
 	if stale {
@@ -181,7 +190,7 @@ func (s *Server) handleWorkloadDetail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "workload not found", http.StatusNotFound)
 		return
 	}
-	if !exists {
+	if !exists || !recent {
 		http.Error(w, "workload not found", http.StatusNotFound)
 		return
 	}
@@ -253,6 +262,19 @@ func (s *Server) isCacheStaleLocked() bool {
 		return false
 	}
 	return time.Since(s.lastSuccessfulFetch) > s.staleThreshold
+}
+
+// isWorkloadRecent returns true if the workload's report timestamp is within maxWorkloadAge.
+// Workloads older than maxWorkloadAge are not displayed (e.g. to hide stale reports from the collector).
+func (s *Server) isWorkloadRecent(status *WorkloadStatus) bool {
+	if s.maxWorkloadAge <= 0 {
+		return true
+	}
+	t, err := time.Parse(time.RFC3339, status.Timestamp)
+	if err != nil {
+		return false
+	}
+	return time.Since(t) <= s.maxWorkloadAge
 }
 
 // clearCache clears the workload cache so the dashboard shows no workloads until the next successful fetch.
