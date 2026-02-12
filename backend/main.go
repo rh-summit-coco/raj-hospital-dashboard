@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -57,11 +58,13 @@ type CollectorReport struct {
 
 // Server holds the dashboard backend state
 type Server struct {
-	collectorURL string
-	statusCache  map[string]*WorkloadStatus
-	cacheMutex   sync.RWMutex
-	httpClient   *http.Client
-	pollInterval time.Duration
+	collectorURL       string
+	statusCache        map[string]*WorkloadStatus
+	cacheMutex         sync.RWMutex
+	httpClient         *http.Client
+	pollInterval       time.Duration
+	lastSuccessfulFetch time.Time
+	staleThreshold     time.Duration
 }
 
 func main() {
@@ -69,12 +72,14 @@ func main() {
 
 	// Load configuration - get Collector URL from environment
 	collectorURL := getEnv("COLLECTOR_URL", "http://attestation-collector:8080")
+	staleSec := getEnvInt("CACHE_STALE_AFTER_SECONDS", 90)
 
 	server := &Server{
-		collectorURL: collectorURL,
-		statusCache:  make(map[string]*WorkloadStatus),
-		pollInterval: 30 * time.Second,
-		httpClient:   &http.Client{Timeout: 10 * time.Second},
+		collectorURL:        collectorURL,
+		statusCache:         make(map[string]*WorkloadStatus),
+		pollInterval:        30 * time.Second,
+		httpClient:          &http.Client{Timeout: 10 * time.Second},
+		staleThreshold:      time.Duration(staleSec) * time.Second,
 	}
 
 	log.Printf("Configured to fetch from Attestation Collector: %s", collectorURL)
@@ -108,25 +113,28 @@ func main() {
 // handleStatus returns the overall dashboard status
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	s.cacheMutex.RLock()
-	defer s.cacheMutex.RUnlock()
+	stale := s.isCacheStaleLocked()
+	if stale {
+		s.cacheMutex.RUnlock()
+		s.clearCache()
+		response := DashboardResponse{OverallStatus: "compliant", Workloads: nil, LastUpdated: time.Now()}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
 	response := DashboardResponse{
 		OverallStatus: "compliant",
 		Workloads:     make([]WorkloadStatus, 0, len(s.statusCache)),
 		LastUpdated:   time.Now(),
 	}
-
 	for _, status := range s.statusCache {
 		response.Workloads = append(response.Workloads, *status)
 		if !status.Attested || status.GateTwoStatus == "failed" {
 			response.OverallStatus = "violation"
 		}
 	}
-
-	// If no workloads configured, return demo data (commented out - use real data only)
-	// if len(response.Workloads) == 0 {
-	// 	response = getDemoResponse()
-	// }
+	s.cacheMutex.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
@@ -135,17 +143,20 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 // handleWorkloads returns all workload statuses
 func (s *Server) handleWorkloads(w http.ResponseWriter, r *http.Request) {
 	s.cacheMutex.RLock()
-	defer s.cacheMutex.RUnlock()
+	stale := s.isCacheStaleLocked()
+	if stale {
+		s.cacheMutex.RUnlock()
+		s.clearCache()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]WorkloadStatus(nil))
+		return
+	}
 
 	workloads := make([]WorkloadStatus, 0, len(s.statusCache))
 	for _, status := range s.statusCache {
 		workloads = append(workloads, *status)
 	}
-
-	// If no workloads configured, return demo data (commented out - use real data only)
-	// if len(workloads) == 0 {
-	// 	workloads = getDemoResponse().Workloads
-	// }
+	s.cacheMutex.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(workloads)
@@ -161,9 +172,15 @@ func (s *Server) handleWorkloadDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.cacheMutex.RLock()
+	stale := s.isCacheStaleLocked()
 	status, exists := s.statusCache[name]
 	s.cacheMutex.RUnlock()
 
+	if stale {
+		s.clearCache()
+		http.Error(w, "workload not found", http.StatusNotFound)
+		return
+	}
 	if !exists {
 		http.Error(w, "workload not found", http.StatusNotFound)
 		return
@@ -226,6 +243,16 @@ func (s *Server) fetchFromCollector() {
 		key := report.Namespace + "/" + report.PodName
 		s.statusCache[key] = status
 	}
+	s.lastSuccessfulFetch = time.Now()
+}
+
+// isCacheStaleLocked reports whether the cache should be treated as stale (no successful fetch within staleThreshold).
+// Must be called with s.cacheMutex at least RLocked.
+func (s *Server) isCacheStaleLocked() bool {
+	if s.staleThreshold <= 0 {
+		return false
+	}
+	return time.Since(s.lastSuccessfulFetch) > s.staleThreshold
 }
 
 // clearCache clears the workload cache so the dashboard shows no workloads until the next successful fetch.
@@ -330,6 +357,15 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvInt(key string, defaultVal int) int {
+	if value := os.Getenv(key); value != "" {
+		if n, err := strconv.Atoi(value); err == nil {
+			return n
+		}
+	}
+	return defaultVal
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
