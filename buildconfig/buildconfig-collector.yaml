@@ -20,7 +20,7 @@ spec:
   source:
     git:
       uri: https://github.com/rh-summit-coco/attestation-collector.git
-      ref: main
+      ref: prod
     type: Git
     contextDir: .
   strategy:
