@@ -92,7 +92,7 @@ func TestConvertCollectorReportAttested(t *testing.T) {
 		Timestamp: time.Now(),
 	}
 
-	status := server.convertCollectorReport(report)
+	status := server.convertCollectorReport(report, "")
 
 	if status.Name != "test-pod" {
 		t.Errorf("Expected Name 'test-pod', got '%s'", status.Name)
@@ -132,7 +132,7 @@ func TestConvertCollectorReportFailed(t *testing.T) {
 		Timestamp: time.Now(),
 	}
 
-	status := server.convertCollectorReport(report)
+	status := server.convertCollectorReport(report, "")
 
 	if status.Attested {
 		t.Error("Expected Attested to be false")
@@ -373,7 +373,7 @@ func TestMultipleTEETypes(t *testing.T) {
 			Timestamp: time.Now(),
 		}
 
-		status := server.convertCollectorReport(report)
+		status := server.convertCollectorReport(report, "")
 
 		if status.TEEType != teeType {
 			t.Errorf("Expected TEEType '%s', got '%s'", teeType, status.TEEType)

@@ -39,6 +39,14 @@ This dashboard is designed for **Raj**, the Operational Security persona in the 
 - Real-time event streaming from Trustee KBS
 - WebSocket updates for immediate incident notification
 
+### Attestation Collector (source of truth for reports)
+
+The **dashboard backend** in this repo calls the Attestation Collector’s `GET /api/v1/reports` and mirrors what it returns. It does not own long-term storage of attestation data.
+
+The **Attestation Collector** is built from a separate repo: [`rh-summit-coco/attestation-collector`](https://github.com/rh-summit-coco/attestation-collector) (see `buildconfig/buildconfig-collector.yaml`). It receives reports from sidecars and exposes them to the dashboard. **If the collector keeps old reports** (e.g. in-memory map or cache) **and keeps listing them** when sidecars stop sending updates, **the dashboard will keep showing them** until the collector stops returning them.
+
+**To fix stale reports at the source:** implement retention / eviction in the attestation-collector (e.g. drop entries when no new report arrives for a pod within a TTL, remove reports for deleted pods, or cap list age). The dashboard can apply extra guards (env vars like `CACHE_MAX_WORKLOAD_AGE_SECONDS`, cache clearing on failed fetches, fingerprint-based timestamp handling) but the authoritative fix is in the collector.
+
 ## Deployment
 
 ### Local Development

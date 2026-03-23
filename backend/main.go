@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -56,10 +57,18 @@ type CollectorReport struct {
 	Error       string       `json:"error,omitempty"`
 }
 
+// reportMetaEntry tracks per-workload report identity so we can freeze the attestation time when
+// the collector keeps returning the same logical report but refreshes Timestamp (hiding stale data).
+type reportMetaEntry struct {
+	fingerprint       string // hash of report content excluding Timestamp
+	frozenTimestamp   string // RFC3339 used for display and age checks
+}
+
 // Server holds the dashboard backend state
 type Server struct {
 	collectorURL        string
 	statusCache         map[string]*WorkloadStatus
+	reportMeta          map[string]reportMetaEntry // key: namespace/podName
 	cacheMutex          sync.RWMutex
 	httpClient          *http.Client
 	pollInterval        time.Duration
@@ -79,6 +88,7 @@ func main() {
 	server := &Server{
 		collectorURL:        collectorURL,
 		statusCache:         make(map[string]*WorkloadStatus),
+		reportMeta:          make(map[string]reportMetaEntry),
 		pollInterval:        30 * time.Second,
 		httpClient:          &http.Client{Timeout: 10 * time.Second},
 		staleThreshold:      time.Duration(staleSec) * time.Second,
@@ -242,16 +252,32 @@ func (s *Server) fetchFromCollector() {
 
 	log.Printf("Fetched %d reports from Collector", len(reports))
 
-	// Replace cache with only what the collector reported—pods not in the report are not shown
+	// Replace cache with only what the collector reported—pods not in the report are not shown.
+	// If the collector returns the same logical report but bumps Timestamp (no new sidecar data),
+	// we keep the first-seen attestation time so CACHE_MAX_WORKLOAD_AGE_SECONDS still applies.
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
-	s.statusCache = make(map[string]*WorkloadStatus)
+
+	oldMeta := s.reportMeta
+	if oldMeta == nil {
+		oldMeta = make(map[string]reportMetaEntry)
+	}
+	newCache := make(map[string]*WorkloadStatus)
+	newMeta := make(map[string]reportMetaEntry)
 
 	for _, report := range reports {
-		status := s.convertCollectorReport(report)
 		key := report.Namespace + "/" + report.PodName
-		s.statusCache[key] = status
+		fp := reportFingerprint(report)
+		ts := report.Timestamp.Format(time.RFC3339)
+		if prev, ok := oldMeta[key]; ok && prev.fingerprint == fp {
+			ts = prev.frozenTimestamp
+		}
+		newMeta[key] = reportMetaEntry{fingerprint: fp, frozenTimestamp: ts}
+		newCache[key] = s.convertCollectorReport(report, ts)
 	}
+
+	s.statusCache = newCache
+	s.reportMeta = newMeta
 	s.lastSuccessfulFetch = time.Now()
 }
 
@@ -282,15 +308,45 @@ func (s *Server) clearCache() {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 	s.statusCache = make(map[string]*WorkloadStatus)
+	s.reportMeta = make(map[string]reportMetaEntry)
 }
 
-// convertCollectorReport converts a Collector report to WorkloadStatus
-func (s *Server) convertCollectorReport(report CollectorReport) *WorkloadStatus {
+// reportFingerprint hashes the stable parts of a report (everything except Timestamp) so
+// repeated identical reports from the collector are detected even if Timestamp is refreshed.
+func reportFingerprint(r CollectorReport) string {
+	type fp struct {
+		PodName     string       `json:"pod_name"`
+		Namespace   string       `json:"namespace"`
+		TEEType     string       `json:"tee_type,omitempty"`
+		Attested    bool         `json:"attested"`
+		TrustVector *TrustVector `json:"trust_vector,omitempty"`
+		EARToken    string       `json:"ear_token,omitempty"`
+		Error       string       `json:"error,omitempty"`
+	}
+	b, _ := json.Marshal(fp{
+		PodName:     r.PodName,
+		Namespace:   r.Namespace,
+		TEEType:     r.TEEType,
+		Attested:    r.Attested,
+		TrustVector: r.TrustVector,
+		EARToken:    r.EARToken,
+		Error:       r.Error,
+	})
+	sum := sha256.Sum256(b)
+	return fmt.Sprintf("%x", sum[:])
+}
+
+// convertCollectorReport converts a Collector report to WorkloadStatus.
+// attestationTimestampRFC3339 is the effective attestation time (may be frozen from a prior poll).
+func (s *Server) convertCollectorReport(report CollectorReport, attestationTimestampRFC3339 string) *WorkloadStatus {
+	if attestationTimestampRFC3339 == "" {
+		attestationTimestampRFC3339 = report.Timestamp.Format(time.RFC3339)
+	}
 	status := &WorkloadStatus{
 		Name:        report.PodName,
 		Namespace:   report.Namespace,
 		Attested:    report.Attested,
-		Timestamp:   report.Timestamp.Format(time.RFC3339),
+		Timestamp:   attestationTimestampRFC3339,
 		LastChecked: time.Now(),
 		TEEType:     report.TEEType,
 	}
